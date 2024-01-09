@@ -14,7 +14,7 @@ let queue = {}; // waiting queue after creating a game
 let rooms = {}; // game rooms
 
 class Board {
-    board;
+    board; // 1, 2 white 3, 4 red
 
     constructor(){
         this.board = [
@@ -28,6 +28,18 @@ class Board {
             [3, 0, 3, 0, 3, 0, 3, 0]
         ];
     }
+
+    isWhite([x, y]){
+        return this.board[x][y] in [1, 2];
+    }
+
+    isRed([x, y]){
+        return this.board[x][y] in [3, 4];
+    }
+
+    move([fromX, fromY], [toX, toY]){
+
+    }
 }
 
 class GameServer {
@@ -36,8 +48,11 @@ class GameServer {
     redPlayer;
     moves;
     turn; // 0 = white, 1 = red
-    time;
+    turnTimestamp;
+    whiteTime;
+    redTime;
     board;
+    gameEndPromises;
     
     constructor(code, socket1, socket2, time){
         this.code = code;
@@ -51,22 +66,61 @@ class GameServer {
             whitePlayer = socket2;
         }
 
-        this.time = time * 60; // minutes to seconds
+        this.whiteTime = time * 60000; // minutes to ms
+        this.redTime = time * 60000;
         this.moves = [];
         this.turn = 1;
         this.board = new Board();
+        this.turnTimestamp = Date.now();
+        this.gameEndPromises.push(setTimeout(()=> {
+            this.gameEnd(true);
+        }, this.redTime));
     }
 
     moveWhite(id, [from, to]){
-        if (this.turn == 1 || this.id != this.whitePlayer){
+        if (this.turn == 1 || id != this.whitePlayer){
             return;
+        }
+
+        if (this.board.isWhite(from)){
+            if (this.board.move(from, to)){
+                this.clearTimeoutPromises();
+                this.whiteTime -= (Date.now() - this.turnTimestamp);
+                this.turnTime = Date.now();
+                this.turn = 1;
+                this.gameEndPromises.push(setTimeout(()=> {
+                    this.gameEnd(true);
+                }, this.redTime));
+            }
         }
     }
 
-    moveRed(){
-        if (this.turn == 0 || this.id != this.redPlayer){
+    moveRed(id, [from, to]){
+        if (this.turn == 0 || id != this.redPlayer){
             return;
         }
+
+        if (this.board.isRed(from)){
+            if (this.board.move(from, to)){
+                this.clearTimeoutPromises();
+                this.redTime -= (Date.now() - this.turnTimestamp);
+                this.turnTime = Date.now();
+                this.turn = 0;
+                this.gameEndPromises.push(setTimeout(()=> {
+                    this.gameEnd(false);
+                }, this.whiteTime));
+            }
+        }
+    }
+
+    clearTimeoutPromises(){
+        for (timeout in this.gameEndPromises){
+            clearTimeout(timeout);
+        }
+    }
+
+    gameEnd(redLost){
+        
     }
 }
 
