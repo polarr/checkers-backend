@@ -1,6 +1,7 @@
 import express from "express";
 import { createServer } from "http";
 import { Server } from "socket.io";
+import { v4 as uuidv4 } from 'uuid';
 
 const app = express();
 const httpServer = createServer(app);
@@ -59,11 +60,11 @@ class GameServer {
 
         // randomize side
         if (Math.random() > 0.5){
-            whitePlayer = socket1;
-            redPlayer = socket2;
+            this.whitePlayer = socket1;
+            this.redPlayer = socket2;
         } else {
-            redPlayer = socket1;
-            whitePlayer = socket2;
+            this.redPlayer = socket1;
+            this.whitePlayer = socket2;
         }
 
         this.whiteTime = time * 60000; // minutes to ms
@@ -72,9 +73,9 @@ class GameServer {
         this.turn = 1;
         this.board = new Board();
         this.turnTimestamp = Date.now();
-        this.gameEndPromises.push(setTimeout(()=> {
+        this.gameEndPromises = [setTimeout(()=> {
             this.gameEnd(true);
-        }, this.redTime));
+        }, this.redTime)];
     }
 
     moveWhite(id, [from, to]){
@@ -124,8 +125,12 @@ class GameServer {
     }
 }
 
+function generateCode(){
+    return uuidv4();
+}
+
 io.on("connection", (socket) => {
-    socket.on("create-room", ({time})=> {
+    socket.on("create-room", async ({time})=> {
         let code = generateCode();
         queue[code] = {
             socket1: socket.id,
@@ -133,15 +138,16 @@ io.on("connection", (socket) => {
             time
         };
 
-        socket.join(code);
+        await socket.join(code);
         socket.emit('created-room', {code});
     });
 
-    socket.on("join-room", ({code}) => {
-        if (!(code in queue)){
+    socket.on("join-room", async ({code}) => {
+        if (!queue.hasOwnProperty(code)){
             socket.emit("join-room-failure", {
                 error: "Room Code Invalid"
             });
+            return;
         }
 
         let {socket1, joinable, time} = queue[code];
@@ -150,17 +156,19 @@ io.on("connection", (socket) => {
             socket.emit("join-room-failure", {
                 error: "Room Full"
             });
+            return;
         }
 
         queue[code].joinable = false;
         rooms[code] = new GameServer(code, socket1, socket.id, time);
-        socket.join(code);
-        socket.to(rooms[code].whitePlayer).emit("start-game", {
+        await socket.join(code);
+        io.to(code).emit('init-game');
+        io.to(rooms[code].whitePlayer).emit("start-game", {
             code,
             time: rooms[code].time,
             playWhite: true
         });
-        socket.to(rooms[code].redPlayer).emit("start-game", {
+        io.to(rooms[code].redPlayer).emit("start-game", {
             code,
             time: rooms[code].time,
             playWhite: false
