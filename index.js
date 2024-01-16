@@ -2,6 +2,8 @@ import express from "express";
 import { createServer } from "http";
 import { Server } from "socket.io";
 import { v4 as uuidv4 } from 'uuid';
+import * as dotenv from 'dotenv';
+dotenv.config();
 
 const app = express();
 const httpServer = createServer(app);
