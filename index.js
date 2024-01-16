@@ -282,7 +282,7 @@ class CheckersServer extends Checkers {
                     // if promoted, end turn
                     return true;
                 }
-                console.log(!this.canTake(isWhite));
+
                 // can the player keep on taking?
                 return !this.canTake(isWhite);
             }
@@ -461,7 +461,7 @@ class GameServer {
         }
         this.clearTimeoutPromises();
         this.ended = true;
-        console.log('ended');
+        console.log('Ended Game: ' + this.code);
         io.to(this.code).emit('game-over', {
             winner: whiteWin ? this.whitePlayer:this.redPlayer
         });
@@ -513,14 +513,16 @@ io.on("connection", (socket) => {
         io.to(code).emit('init-game');
         io.to(rooms[code].whitePlayer).emit("start-game", {
             code,
-            time: rooms[code].time,
+            time: rooms[code].whiteTime,
             playWhite: true
         });
         io.to(rooms[code].redPlayer).emit("start-game", {
             code,
-            time: rooms[code].time,
+            time: rooms[code].redTime,
             playWhite: false
         });
+
+        console.log("Started Game: " + code);
     });
 
     socket.on("move", ({code, from, to})=> {
@@ -539,7 +541,7 @@ io.on("connection", (socket) => {
         }
     });
 
-    socket.on("disconnect", ()=> {
+    socket.on("disconnecting", ()=> {
         for (let room of socket.rooms){
             if (room == socket.id){
                 continue;
