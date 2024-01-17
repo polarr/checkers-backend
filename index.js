@@ -375,7 +375,7 @@ class GameServer {
         this.checkers = new CheckersServer();
         this.turnTimestamp = Date.now();
         this.gameEndPromises = [setTimeout(()=> {
-            this.gameEnd(true);
+            this.gameEnd(true, 1);
         }, this.redTime)];
         this.ended = false;
     }
@@ -417,14 +417,14 @@ class GameServer {
             this.turnTimestamp = Date.now();
             this.turn = 1;
             this.gameEndPromises.push(setTimeout(()=> {
-                this.gameEnd(true);
+                this.gameEnd(true, 1);
             }, this.redTime));
         }
 
         this.emitState();
 
         if (this.checkers.findWinner()){
-            this.gameEnd(this.checkers.findWinner() == 1);
+            this.gameEnd(this.checkers.findWinner() == 1, 0);
         }
     }
 
@@ -440,13 +440,13 @@ class GameServer {
             this.turnTimestamp = Date.now();
             this.turn = 0;
             this.gameEndPromises.push(setTimeout(()=> {
-                this.gameEnd(false);
+                this.gameEnd(false, 1);
             }, this.whiteTime));
         }
 
         this.emitState();
         if (this.checkers.findWinner()){
-            this.gameEnd(this.checkers.findWinner() == 1);
+            this.gameEnd(this.checkers.findWinner() == 1, 0);
         }
     }
 
@@ -457,12 +457,19 @@ class GameServer {
         this.gameEndPromises = [];
     }
 
-    gameEnd(whiteWin){
+    gameEnd(whiteWin, reason){
         if (this.ended){
             return;
         }
         this.clearTimeoutPromises();
         this.ended = true;
+        if (reason == 0){
+            console.log((whiteWin ? "WHITE":"RED") + " player took all the pieces");
+        } else if (reason == 1){
+            console.log((whiteWin ? "RED":"WHITE") + " player ran out of time");
+        } else {
+            console.log((whiteWin ? "RED":"WHITE") + " player disconnected");
+        }
         console.log('Ended Game: ' + this.code);
         io.to(this.code).emit('game-over', {
             winner: whiteWin ? this.whitePlayer:this.redPlayer
@@ -550,7 +557,7 @@ io.on("connection", (socket) => {
             }
 
             let color = rooms[room].getColor(socket.id);
-            rooms[room].gameEnd(color == 2);
+            rooms[room].gameEnd(color == 2, 2);
             socket.leave(room);
         }
     });
