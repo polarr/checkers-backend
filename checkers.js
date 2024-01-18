@@ -225,8 +225,23 @@ class CheckersServer extends Checkers {
 
     constructor(board){
         super(board);
-        this.whitePieces = 12;
-        this.redPieces = 12;
+        this.whitePieces = 0;
+        this.redPieces = 0;
+        for (let row = 0; row < this.board.length; row++){
+            for (let col = 0; col < this.board[row].length; col++){
+                let piece = this.board[row][col];
+                if (piece == 0){
+                    continue;
+                }
+
+                if (piece == 1 || piece == 2){
+                    this.whitePieces++;
+                    continue;
+                }
+
+                this.redPieces++;
+            }
+        }
     }
 
     /**
@@ -324,4 +339,4 @@ class CheckersServer extends Checkers {
     }
 }
 
-export default { Checkers, CheckersServer };
+export { Checkers, CheckersServer };
