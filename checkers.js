@@ -339,4 +339,4 @@ class CheckersServer extends Checkers {
     }
 }
 
-module.exports = { Checkers, CheckersServer };
+export { Checkers, CheckersServer };
